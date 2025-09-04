@@ -488,12 +488,6 @@
                 this.ctx.lineWidth = 3;
                 this.ctx.stroke();
 
-                // Draw mass label on the object
-                this.ctx.fillStyle = '#fff';
-                this.ctx.font = 'bold 16px Arial'; // Larger font for mass label
-                this.ctx.textAlign = 'center';
-                this.ctx.fillText(this.mass.toFixed(1) + 'kg', x, y + 4);
-
                 // Calculate and draw velocity vector (tangent to circle)
                 const velocityScale = 80; // Longer for better visibility
                 const tangentAngle = this.angle + Math.PI / 2; // Perpendicular to radius
