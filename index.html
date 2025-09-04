@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Uniform Circular Motion - வட்ட இயக்கம்</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      min-height: 100vh;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .controls {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .control {
+      background: rgba(255,255,255,0.1);
+      padding: 10px 15px;
+      border-radius: 12px;
+      text-align: center;
+    }
+    .control label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+    input[type=range] {
+      width: 150px;
+    }
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 12px;
+      background: #4ecdc4;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #38b2ac;
+    }
+    #simulationCanvas {
+      display: block;
+      margin: 20px auto;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    .measurements {
+      display: flex;
+      justify-content: center;
+      gap: 25px;
+      margin-top: 15px;
+      font-size: 16px;
+    }
+    .measurements span {
+      font-weight: bold;
+      color: #ffd700;
+    }
+  </style>
+</head>
+<body>
+  <h1>வட்ட இயக்கம் (Uniform Circular Motion)</h1>
+
+  <div class="controls">
+    <div class="control">
+      <label>அரைக்கோள் (Radius): <span id="radiusValue">1.0</span> m</label>
+      <input type="range" id="radiusSlider" min="50" max="200" value="100"/>
+    </div>
+    <div class="control">
+      <label>வேகம் (Speed): <span id="speedValue">2.0</span> m/s</label>
+      <input type="range" id="speedSlider" min="1" max="5" step="0.1" value="2"/>
+    </div>
+    <div class="control">
+      <label>திணிவு (Mass): <span id="massValue">1.0</span> kg</label>
+      <input type="range" id="massSlider" min="1" max="5" step="0.5" value="1"/>
+    </div>
+    <div class="control">
+      <button id="toggleForce">மைய நோக்கி விசை காட்ட / மறை</button>
+    </div>
+    <div class="control">
+      <button id="playPause">இயக்கத்தை நிறுத்து / தொடங்கு</button>
+    </div>
+  </div>
+
+  <canvas id="simulationCanvas" width="600" height="400"></canvas>
+
+  <div class="measurements">
+    <div>மைய நோக்கி விசை Fc: <span id="forceValue">0</span> N</div>
+    <div>வேகம் v: <span id="velocityValue">0</span> m/s</div>
+    <div>அரைக்கோள் r: <span id="radiusMeasure">0</span> m</div>
+  </div>
+
+  <script>
+    class CircularMotionSimulation {
+      constructor() {
+        this.canvas = document.getElementById('simulationCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.centerX = this.canvas.width / 2;
+        this.centerY = this.canvas.height / 2;
+
+        this.radius = 100;
+        this.speed = 2;
+        this.mass = 1;
+        this.angle = 0;
+        this.isPlaying = true;
+        this.showCentripetalForce = true;
+
+        this.setupControls();
+        this.updateMeasurements();
+        this.animate();
+      }
+
+      setupControls() {
+        document.getElementById('radiusSlider').addEventListener('input', e => {
+          this.radius = parseInt(e.target.value);
+          document.getElementById('radiusValue').textContent = (this.radius / 100).toFixed(1);
+          this.updateMeasurements();
+        });
+        document.getElementById('speedSlider').addEventListener('input', e => {
+          this.speed = parseFloat(e.target.value);
+          document.getElementById('speedValue').textContent = this.speed.toFixed(1);
+          this.updateMeasurements();
+        });
+        document.getElementById('massSlider').addEventListener('input', e => {
+          this.mass = parseFloat(e.target.value);
+          document.getElementById('massValue').textContent = this.mass.toFixed(1);
+          this.updateMeasurements();
+        });
+        document.getElementById('toggleForce').addEventListener('click', () => {
+          this.showCentripetalForce = !this.showCentripetalForce;
+        });
+        document.getElementById('playPause').addEventListener('click', () => {
+          this.isPlaying = !this.isPlaying;
+        });
+      }
+
+      updateMeasurements() {
+        const velocity = this.speed;
+        const r = this.radius / 100;
+        const force = (this.mass * velocity * velocity) / r;
+        document.getElementById('forceValue').textContent = force.toFixed(2);
+        document.getElementById('velocityValue').textContent = velocity.toFixed(2);
+        document.getElementById('radiusMeasure').textContent = r.toFixed(2);
+      }
+
+      drawArrow(fromX, fromY, toX, toY, color, thickness = 3, headSize = 10) {
+        const dx = toX - fromX;
+        const dy = toY - fromY;
+        const angle = Math.atan2(dy, dx);
+
+        this.ctx.strokeStyle = color;
+        this.ctx.fillStyle = color;
+        this.ctx.lineWidth = thickness;
+        this.ctx.lineCap = 'round';
+        this.ctx.lineJoin = 'round';
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(fromX, fromY);
+        this.ctx.lineTo(toX, toY);
+        this.ctx.stroke();
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(toX, toY);
+        this.ctx.lineTo(toX - headSize * Math.cos(angle - Math.PI / 5), toY - headSize * Math.sin(angle - Math.PI / 5));
+        this.ctx.lineTo(toX - headSize * 0.6 * Math.cos(angle), toY - headSize * 0.6 * Math.sin(angle));
+        this.ctx.lineTo(toX - headSize * Math.cos(angle + Math.PI / 5), toY - headSize * Math.sin(angle + Math.PI / 5));
+        this.ctx.closePath();
+        this.ctx.fill();
+      }
+
+      draw() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Circle path
+        this.ctx.beginPath();
+        this.ctx.arc(this.centerX, this.centerY, this.radius, 0, 2 * Math.PI);
+        this.ctx.strokeStyle = '#666';
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([8, 8]);
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
+
+        // Center point
+        this.ctx.beginPath();
+        this.ctx.arc(this.centerX, this.centerY, 6, 0, 2 * Math.PI);
+        this.ctx.fillStyle = '#333';
+        this.ctx.fill();
+        this.ctx.strokeStyle = '#fff';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+
+        const x = this.centerX + this.radius * Math.cos(this.angle);
+        const y = this.centerY + this.radius * Math.sin(this.angle);
+
+        // Radius line (dotted) with label r
+        this.ctx.beginPath();
+        this.ctx.moveTo(this.centerX, this.centerY);
+        this.ctx.lineTo(x, y);
+        this.ctx.strokeStyle = '#4ecdc4';
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([4, 4]);
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
+
+        // r label
+        const midX = (this.centerX + x) / 2;
+        const midY = (this.centerY + y) / 2;
+        this.ctx.fillStyle = '#4ecdc4';
+        this.ctx.font = 'bold 18px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('r', midX - 10, midY - 10);
+
+        // Moving object
+        const objectRadius = Math.max(10, Math.min(20, 10 + this.mass * 3));
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, objectRadius, 0, 2 * Math.PI);
+        this.ctx.fillStyle = '#ff6b6b';
+        this.ctx.fill();
+        this.ctx.strokeStyle = '#fff';
+        this.ctx.lineWidth = 3;
+        this.ctx.stroke();
+
+        this.ctx.fillStyle = '#fff';
+        this.ctx.font = 'bold 14px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(this.mass.toFixed(1) + 'kg', x, y + 4);
+
+        // Velocity vector (thin + sharp)
+        const velocityScale = 70;
+        const tangentAngle = this.angle + Math.PI / 2;
+        const velocityEndX = x + velocityScale * Math.cos(tangentAngle);
+        const velocityEndY = y + velocityScale * Math.sin(tangentAngle);
+        this.drawArrow(x, y, velocityEndX, velocityEndY, '#FF4500', 3, 10);
+
+        const velLabelX = velocityEndX + 20 * Math.cos(tangentAngle);
+        const velLabelY = velocityEndY + 20 * Math.sin(tangentAngle);
+        this.ctx.fillStyle = '#FF4500';
+        this.ctx.font = 'bold 18px Arial';
+        this.ctx.fillText('v', velLabelX, velLabelY);
+
+        // Centripetal force vector
+        if (this.showCentripetalForce) {
+          const forceScale = 70;
+          const forceAngle = this.angle + Math.PI;
+          const forceEndX = x + forceScale * Math.cos(forceAngle);
+          const forceEndY = y + forceScale * Math.sin(forceAngle);
+          this.drawArrow(x, y, forceEndX, forceEndY, '#00AA00', 3, 10);
+
+          // Fc with subscript
+          this.ctx.fillStyle = '#00AA00';
+          this.ctx.font = 'bold 20px Arial';
+          this.ctx.fillText('F', forceEndX - 10, forceEndY - 8);
+          this.ctx.font = 'bold 14px Arial';
+          this.ctx.fillText('c', forceEndX + 5, forceEndY - 2);
+        }
+      }
+
+      animate() {
+        this.draw();
+        if (this.isPlaying) {
+          this.angle += this.speed * 0.02;
+        }
+        requestAnimationFrame(() => this.animate());
+      }
+    }
+
+    window.addEventListener('load', () => {
+      new CircularMotionSimulation();
+    });
+  </script>
+</body>
+</html>
