@@ -458,9 +458,25 @@
                 const x = this.centerX + this.radius * Math.cos(this.angle);
                 const y = this.centerY + this.radius * Math.sin(this.angle);
 
-                // Radius line removed as requested
+                // Draw radius line with bright gold color
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.centerX, this.centerY);
+                this.ctx.lineTo(x, y);
+                this.ctx.strokeStyle = '#FFD700'; // Bright gold color for radius line
+                this.ctx.lineWidth = 3;
+                this.ctx.setLineDash([5, 5]);
+                this.ctx.stroke();
+                this.ctx.setLineDash([]);
 
-                // Radius label removed as requested
+                // Show radius label only when centripetal force is not selected
+                if (!this.showCentripetalForce) {
+                    const radiusLabelX = this.centerX + (this.radius * 0.5) * Math.cos(this.angle);
+                    const radiusLabelY = this.centerY + (this.radius * 0.5) * Math.sin(this.angle);
+                    this.ctx.fillStyle = '#FFD700'; // Matching gold color for label
+                    this.ctx.font = 'bold 22px Arial'; // Large font size for radius
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText('r', radiusLabelX, radiusLabelY);
+                }
 
                 // Draw moving object - size varies with mass, using purple color to represent weight/mass
                 const objectRadius = Math.max(10, Math.min(20, 10 + this.mass * 3));
@@ -474,9 +490,9 @@
 
                 // Draw mass label on the object
                 this.ctx.fillStyle = '#fff';
-                this.ctx.font = 'bold 10px Arial';
+                this.ctx.font = 'bold 16px Arial'; // Larger font for mass label
                 this.ctx.textAlign = 'center';
-                this.ctx.fillText(this.mass.toFixed(1) + 'kg', x, y + 3);
+                this.ctx.fillText(this.mass.toFixed(1) + 'kg', x, y + 4);
 
                 // Calculate and draw velocity vector (tangent to circle)
                 const velocityScale = 80; // Longer for better visibility
@@ -484,40 +500,40 @@
                 const velocityEndX = x + velocityScale * Math.cos(tangentAngle);
                 const velocityEndY = y + velocityScale * Math.sin(tangentAngle);
 
-                // Draw velocity arrow (orange, tangent to circle) - thinner and sharper like Fc arrow
+                // Draw velocity arrow (orange, tangent to circle)
                 this.drawArrow(x, y, velocityEndX, velocityEndY, '#FF4500', 3, 10);
 
                 // Add velocity label at the tip of the arrow with gap
-                const labelGap = 15; // Gap between arrow tip and label
+                const labelGap = 15;
                 const velLabelX = velocityEndX + labelGap * Math.cos(tangentAngle);
                 const velLabelY = velocityEndY + labelGap * Math.sin(tangentAngle);
                 this.ctx.fillStyle = '#FF4500';
-                this.ctx.font = 'bold 12px Arial';
+                this.ctx.font = 'bold 20px Arial'; // Larger font for velocity label
                 this.ctx.textAlign = 'center';
                 this.ctx.fillText('v', velLabelX, velLabelY);
 
                 // Draw centripetal force vector (toward center)
                 if (this.showCentripetalForce) {
                     // Make centripetal force arrow consistent length for clarity
-                    const forceScale = 70; // Fixed length for better visibility
+                    const forceScale = 70;
                     const forceAngle = this.angle + Math.PI; // Points toward center
                     const forceEndX = x + forceScale * Math.cos(forceAngle);
                     const forceEndY = y + forceScale * Math.sin(forceAngle);
 
-                    // Draw centripetal force arrow (green, toward center) - thinner and sharper
+                    // Draw centripetal force arrow (green, toward center)
                     this.drawArrow(x, y, forceEndX, forceEndY, '#00AA00', 3, 10);
 
                     // Add Fc label at the tip of the centripetal force arrow with gap
                     const forceLabelX = forceEndX + labelGap * Math.cos(forceAngle);
                     const forceLabelY = forceEndY + labelGap * Math.sin(forceAngle);
                     this.ctx.fillStyle = '#00AA00';
-                    this.ctx.font = 'bold 16px Arial';
+                    this.ctx.font = 'bold 22px Arial'; // Larger font for force label
                     this.ctx.textAlign = 'center';
                     
-                    // Draw F and subscript c without gap
-                    this.ctx.fillText('F', forceLabelX - 4, forceLabelY);
-                    this.ctx.font = 'bold 12px Arial';
-                    this.ctx.fillText('c', forceLabelX + 4, forceLabelY + 4);
+                    // Draw F and subscript c
+                    this.ctx.fillText('F', forceLabelX - 5, forceLabelY);
+                    this.ctx.font = 'bold 18px Arial'; // Larger subscript
+                    this.ctx.fillText('c', forceLabelX + 6, forceLabelY + 5);
                 }
             }
         }
