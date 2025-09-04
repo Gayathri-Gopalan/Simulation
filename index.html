@@ -458,15 +458,7 @@
                 const x = this.centerX + this.radius * Math.cos(this.angle);
                 const y = this.centerY + this.radius * Math.sin(this.angle);
 
-                // Draw radius line
-                this.ctx.beginPath();
-                this.ctx.moveTo(this.centerX, this.centerY);
-                this.ctx.lineTo(x, y);
-                this.ctx.strokeStyle = '#4ecdc4';
-                this.ctx.lineWidth = 2;
-                this.ctx.setLineDash([3, 3]);
-                this.ctx.stroke();
-                this.ctx.setLineDash([]);
+                // Radius line removed as requested
 
                 // Radius label removed as requested
 
