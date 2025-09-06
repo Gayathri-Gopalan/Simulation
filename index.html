@@ -53,7 +53,7 @@
         .simulation-area {
             background: rgba(255, 255, 255, 0.9);
             border-radius: 15px;
-            padding: 20px;
+            padding: 15px;
             position: relative;
             min-height: 500px;
             display: flex;
@@ -66,8 +66,8 @@
         }
 
         canvas {
-            border: 3px solid #333;
-            border-radius: 10px;
+            border: 1px solid #333;
+            border-radius: 8px;
             background: #f0f8ff;
         }
 
@@ -200,7 +200,7 @@
         <div class="main-content">
             <div class="simulation-area">
                 <div class="canvas-container">
-                    <canvas id="simulationCanvas" width="400" height="400"></canvas>
+                    <canvas id="simulationCanvas" width="500" height="500"></canvas>
                 </div>
             </div>
 
@@ -280,7 +280,9 @@
                     • ஆரஞ்சு அம்பு = வேகம் (வட்டத்திற்கு தொடுகோடு)<br>
                     • பச்சை அம்பு = மையநோக்கு விசை (மையத்தை நோக்கி)<br><br>
                     <strong>Key Formula:</strong> F<sub>c</sub> = mv²/r<br>
-                    <strong>முக்கியச் சமன்பாடு:</strong> F<sub>c</sub> = mv²/r
+                    <strong>முக்கியச் சமன்பாடு:</strong> F<sub>c</sub> = mv²/r<br><br>
+                    <strong>Vector lengths are proportional to their magnitudes</strong><br>
+                    <strong>திசையன் நீளம் அவற்றின் அளவுக்கு விகிதாசாரமாக இருக்கும்</strong>
                 </div>
             </div>
         </div>
@@ -322,6 +324,7 @@
                     this.speed = parseFloat(e.target.value);
                     document.getElementById('speedValue').textContent = this.speed.toFixed(1);
                     this.updateMeasurements();
+                    if (!this.isPlaying) this.draw();
                 });
 
                 radiusSlider.addEventListener('input', (e) => {
@@ -366,6 +369,36 @@
                 document.getElementById('angularVelocityValue').textContent = angularVelocity.toFixed(2);
             }
 
+            calculateDynamicVectorLengths() {
+                // Calculate dynamic scales based on current values
+                const radiusInMeters = this.radius / 100;
+                const centripetalForce = (this.mass * this.speed * this.speed) / radiusInMeters;
+                
+                // Velocity vector scaling - ensure good visibility at all speeds
+                // Min speed: 0.5 m/s -> 50px, Max speed: 5.0 m/s -> 120px
+                const minSpeed = 0.5;
+                const maxSpeed = 5.0;
+                const speedRatio = (this.speed - minSpeed) / (maxSpeed - minSpeed);
+                const velocityLength = 50 + (speedRatio * 70); // 50px to 120px range
+                
+                // Force vector scaling - based on actual force range
+                // Calculate theoretical min and max forces
+                const minForce = (0.5 * 0.5 * 0.5) / 1.5; // min_mass * min_speed^2 / max_radius = 0.083N
+                const maxForce = (5.0 * 5.0 * 5.0) / 0.5;   // max_mass * max_speed^2 / min_radius = 250N
+                
+                // Use logarithmic scaling for force to handle large range
+                const logMinForce = Math.log(minForce + 1);
+                const logMaxForce = Math.log(maxForce + 1);
+                const logCurrentForce = Math.log(centripetalForce + 1);
+                const forceRatio = (logCurrentForce - logMinForce) / (logMaxForce - logMinForce);
+                const forceLength = 40 + (forceRatio * 80); // 40px to 120px range
+                
+                return {
+                    velocityLength: Math.max(50, Math.min(140, velocityLength)),
+                    forceLength: Math.max(40, Math.min(140, forceLength))
+                };
+            }
+
             play() {
                 if (!this.isPlaying) {
                     this.isPlaying = true;
@@ -394,10 +427,14 @@
                 }
             }
 
-            drawArrow(fromX, fromY, toX, toY, color, thickness = 6, headSize = 16) {
+            drawArrow(fromX, fromY, toX, toY, color, thickness = 4, headSize = 14) {
                 const dx = toX - fromX;
                 const dy = toY - fromY;
                 const angle = Math.atan2(dy, dx);
+                const length = Math.sqrt(dx*dx + dy*dy);
+                
+                // Don't draw very short arrows
+                if (length < 5) return;
                 
                 this.ctx.strokeStyle = color;
                 this.ctx.fillStyle = color;
@@ -405,23 +442,25 @@
                 this.ctx.lineCap = 'round';
                 this.ctx.lineJoin = 'round';
                 
-                // Draw the main line with enhanced shadow for better visibility
-                this.ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-                this.ctx.shadowBlur = 4;
-                this.ctx.shadowOffsetX = 2;
-                this.ctx.shadowOffsetY = 2;
+                // Draw the main line with shadow for better visibility
+                this.ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                this.ctx.shadowBlur = 3;
+                this.ctx.shadowOffsetX = 1;
+                this.ctx.shadowOffsetY = 1;
                 
                 this.ctx.beginPath();
                 this.ctx.moveTo(fromX, fromY);
                 this.ctx.lineTo(toX, toY);
                 this.ctx.stroke();
                 
-                // Draw filled arrowhead - larger and more prominent
+                // Draw filled arrowhead - size proportional to vector length
+                const scaledHeadSize = Math.max(8, Math.min(headSize, length * 0.25));
+                
                 this.ctx.beginPath();
                 this.ctx.moveTo(toX, toY);
-                this.ctx.lineTo(toX - headSize * Math.cos(angle - Math.PI / 5), toY - headSize * Math.sin(angle - Math.PI / 5));
-                this.ctx.lineTo(toX - headSize * 0.6 * Math.cos(angle), toY - headSize * 0.6 * Math.sin(angle));
-                this.ctx.lineTo(toX - headSize * Math.cos(angle + Math.PI / 5), toY - headSize * Math.sin(angle + Math.PI / 5));
+                this.ctx.lineTo(toX - scaledHeadSize * Math.cos(angle - Math.PI / 6), toY - scaledHeadSize * Math.sin(angle - Math.PI / 6));
+                this.ctx.lineTo(toX - scaledHeadSize * 0.6 * Math.cos(angle), toY - scaledHeadSize * 0.6 * Math.sin(angle));
+                this.ctx.lineTo(toX - scaledHeadSize * Math.cos(angle + Math.PI / 6), toY - scaledHeadSize * Math.sin(angle + Math.PI / 6));
                 this.ctx.closePath();
                 this.ctx.fill();
                 
@@ -458,12 +497,12 @@
                 const x = this.centerX + this.radius * Math.cos(this.angle);
                 const y = this.centerY + this.radius * Math.sin(this.angle);
 
-                // Draw radius line with bright gold color
+                // Draw radius line
                 this.ctx.beginPath();
                 this.ctx.moveTo(this.centerX, this.centerY);
                 this.ctx.lineTo(x, y);
-                this.ctx.strokeStyle = '#FFD700'; // Bright gold color for radius line
-                this.ctx.lineWidth = 3;
+                this.ctx.strokeStyle = '#FFD700';
+                this.ctx.lineWidth = 2;
                 this.ctx.setLineDash([5, 5]);
                 this.ctx.stroke();
                 this.ctx.setLineDash([]);
@@ -472,62 +511,73 @@
                 if (!this.showCentripetalForce) {
                     const radiusLabelX = this.centerX + (this.radius * 0.5) * Math.cos(this.angle);
                     const radiusLabelY = this.centerY + (this.radius * 0.5) * Math.sin(this.angle);
-                    this.ctx.fillStyle = '#FFD700'; // Matching gold color for label
-                    this.ctx.font = 'bold 22px Arial'; // Large font size for radius
+                    this.ctx.fillStyle = '#FFD700';
+                    this.ctx.font = 'bold 20px Arial';
                     this.ctx.textAlign = 'center';
                     this.ctx.fillText('r', radiusLabelX, radiusLabelY);
                 }
 
-                // Draw moving object - size varies with mass, using purple color to represent weight/mass
-                const objectRadius = Math.max(10, Math.min(20, 10 + this.mass * 3));
+                // Draw moving object - size varies with mass
+                const objectRadius = Math.max(8, Math.min(16, 8 + this.mass * 2.5));
                 this.ctx.beginPath();
                 this.ctx.arc(x, y, objectRadius, 0, 2 * Math.PI);
-                this.ctx.fillStyle = '#8A2BE2'; // Purple color for weight representation
+                this.ctx.fillStyle = '#8A2BE2';
                 this.ctx.fill();
                 this.ctx.strokeStyle = '#fff';
-                this.ctx.lineWidth = 3;
+                this.ctx.lineWidth = 2;
                 this.ctx.stroke();
 
+                // Get dynamic vector lengths
+                const vectorLengths = this.calculateDynamicVectorLengths();
+
                 // Calculate and draw velocity vector (tangent to circle)
-                const velocityScale = 80; // Longer for better visibility
-                const tangentAngle = this.angle + Math.PI / 2; // Perpendicular to radius
-                const velocityEndX = x + velocityScale * Math.cos(tangentAngle);
-                const velocityEndY = y + velocityScale * Math.sin(tangentAngle);
+                const tangentAngle = this.angle + Math.PI / 2;
+                const velocityEndX = x + vectorLengths.velocityLength * Math.cos(tangentAngle);
+                const velocityEndY = y + vectorLengths.velocityLength * Math.sin(tangentAngle);
 
                 // Draw velocity arrow (orange, tangent to circle)
-                this.drawArrow(x, y, velocityEndX, velocityEndY, '#FF4500', 3, 10);
+                this.drawArrow(x, y, velocityEndX, velocityEndY, '#FF4500', 4, 14);
 
-                // Add velocity label at the tip of the arrow with gap
-                const labelGap = 15;
+                // Add velocity label
+                const labelGap = 20;
                 const velLabelX = velocityEndX + labelGap * Math.cos(tangentAngle);
                 const velLabelY = velocityEndY + labelGap * Math.sin(tangentAngle);
+                
                 this.ctx.fillStyle = '#FF4500';
-                this.ctx.font = 'bold 20px Arial'; // Larger font for velocity label
+                this.ctx.font = 'bold 18px Arial';
                 this.ctx.textAlign = 'center';
+                this.ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+                this.ctx.shadowBlur = 3;
                 this.ctx.fillText('v', velLabelX, velLabelY);
+                this.ctx.shadowColor = 'transparent';
+                this.ctx.shadowBlur = 0;
 
                 // Draw centripetal force vector (toward center)
                 if (this.showCentripetalForce) {
-                    // Make centripetal force arrow consistent length for clarity
-                    const forceScale = 70;
-                    const forceAngle = this.angle + Math.PI; // Points toward center
-                    const forceEndX = x + forceScale * Math.cos(forceAngle);
-                    const forceEndY = y + forceScale * Math.sin(forceAngle);
+                    const forceAngle = this.angle + Math.PI;
+                    const forceEndX = x + vectorLengths.forceLength * Math.cos(forceAngle);
+                    const forceEndY = y + vectorLengths.forceLength * Math.sin(forceAngle);
 
                     // Draw centripetal force arrow (green, toward center)
-                    this.drawArrow(x, y, forceEndX, forceEndY, '#00AA00', 3, 10);
+                    this.drawArrow(x, y, forceEndX, forceEndY, '#00AA00', 4, 14);
 
-                    // Add Fc label at the tip of the centripetal force arrow with gap
+                    // Add Fc label
                     const forceLabelX = forceEndX + labelGap * Math.cos(forceAngle);
                     const forceLabelY = forceEndY + labelGap * Math.sin(forceAngle);
+                    
                     this.ctx.fillStyle = '#00AA00';
-                    this.ctx.font = 'bold 22px Arial'; // Larger font for force label
+                    this.ctx.font = 'bold 20px Arial';
                     this.ctx.textAlign = 'center';
+                    this.ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+                    this.ctx.shadowBlur = 3;
                     
                     // Draw F and subscript c
                     this.ctx.fillText('F', forceLabelX - 5, forceLabelY);
-                    this.ctx.font = 'bold 18px Arial'; // Larger subscript
-                    this.ctx.fillText('c', forceLabelX + 6, forceLabelY + 5);
+                    this.ctx.font = 'bold 16px Arial';
+                    this.ctx.fillText('c', forceLabelX + 6, forceLabelY + 4);
+                    
+                    this.ctx.shadowColor = 'transparent';
+                    this.ctx.shadowBlur = 0;
                 }
             }
         }
