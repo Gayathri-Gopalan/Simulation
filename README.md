@@ -6,6 +6,7 @@ An interactive web-based simulation to explore the concept of Uniform Circular M
 This project is designed for students and educators to visualize velocity, radius, and centripetal force with adjustable parameters.
 
 🔗 Live Demo
+https://gayathri-gopalan.github.io/Simulation/
 
 👉 View Simulation on GitHub Pages
 
