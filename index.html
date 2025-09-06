@@ -370,32 +370,54 @@
             }
 
             calculateDynamicVectorLengths() {
-                // Calculate dynamic scales based on current values
+                // Calculate actual physical values
                 const radiusInMeters = this.radius / 100;
                 const centripetalForce = (this.mass * this.speed * this.speed) / radiusInMeters;
                 
-                // Velocity vector scaling - ensure good visibility at all speeds
-                // Min speed: 0.5 m/s -> 50px, Max speed: 5.0 m/s -> 120px
-                const minSpeed = 0.5;
-                const maxSpeed = 5.0;
-                const speedRatio = (this.speed - minSpeed) / (maxSpeed - minSpeed);
-                const velocityLength = 50 + (speedRatio * 70); // 50px to 120px range
+                // Velocity vector scaling - proportional to speed
+                const velocityLength = Math.max(40, Math.min(90, 30 + this.speed * 12));
                 
-                // Force vector scaling - based on actual force range
-                // Calculate theoretical min and max forces
-                const minForce = (0.5 * 0.5 * 0.5) / 1.5; // min_mass * min_speed^2 / max_radius = 0.083N
-                const maxForce = (5.0 * 5.0 * 5.0) / 0.5;   // max_mass * max_speed^2 / min_radius = 250N
+                // BALANCED FORCE SCALING - All effects clearly visible
                 
-                // Use logarithmic scaling for force to handle large range
-                const logMinForce = Math.log(minForce + 1);
-                const logMaxForce = Math.log(maxForce + 1);
-                const logCurrentForce = Math.log(centripetalForce + 1);
-                const forceRatio = (logCurrentForce - logMinForce) / (logMaxForce - logMinForce);
-                const forceLength = 40 + (forceRatio * 80); // 40px to 120px range
+                // Calculate available space (80% of radius to stay safe)
+                const maxAvailableSpace = this.radius * 0.80;
+                const minForceLength = 25;
+                const usableRange = maxAvailableSpace - minForceLength;
+                
+                // Calculate relative force magnitude (normalized to show relationships)
+                const minSpeed = 0.5, maxSpeed = 5.0;
+                const minMass = 0.5, maxMass = 5.0;
+                const minRadius = 0.5, maxRadius = 1.5; // in meters
+                
+                // Normalize each parameter to 0-1 range
+                const speedNorm = (this.speed - minSpeed) / (maxSpeed - minSpeed);
+                const massNorm = (this.mass - minMass) / (maxMass - minMass);
+                const radiusNorm = (maxRadius - radiusInMeters) / (maxRadius - minRadius); // Inverse for radius
+                
+                // BALANCED weights - all effects clearly visible
+                // Speed has v² effect, mass is linear, radius is inverse - ALL should be noticeable
+                const speedEffect = Math.pow(speedNorm, 2) * 0.40;  // v² effect (40% weight)
+                const massEffect = massNorm * 0.35;                 // Mass effect (35% weight)
+                const radiusEffect = radiusNorm * 0.25;             // STRONGER radius effect (25% weight)
+                
+                // Combined normalized force (0 to 1)
+                const combinedEffect = speedEffect + massEffect + radiusEffect;
+                
+                // Map to actual pixel length within safe range
+                const forceLength = minForceLength + (combinedEffect * usableRange);
+                
+                console.log(`=== BALANCED FORCE SCALING DEBUG ===`);
+                console.log(`Speed: ${this.speed} (norm: ${speedNorm.toFixed(2)}, effect: ${speedEffect.toFixed(3)})`);
+                console.log(`Mass: ${this.mass} (norm: ${massNorm.toFixed(2)}, effect: ${massEffect.toFixed(3)})`);
+                console.log(`Radius: ${radiusInMeters.toFixed(1)}m (norm: ${radiusNorm.toFixed(2)}, effect: ${radiusEffect.toFixed(3)})`);
+                console.log(`Combined effect: ${combinedEffect.toFixed(3)}`);
+                console.log(`Force length: ${forceLength.toFixed(1)}px (max: ${maxAvailableSpace}px)`);
+                console.log(`Actual force: ${centripetalForce.toFixed(2)}N`);
+                console.log('=====================================');
                 
                 return {
-                    velocityLength: Math.max(50, Math.min(140, velocityLength)),
-                    forceLength: Math.max(40, Math.min(140, forceLength))
+                    velocityLength: velocityLength,
+                    forceLength: Math.max(minForceLength, Math.min(maxAvailableSpace, forceLength))
                 };
             }
 
@@ -552,18 +574,32 @@
                 this.ctx.shadowColor = 'transparent';
                 this.ctx.shadowBlur = 0;
 
-                // Draw centripetal force vector (toward center)
+                // Draw centripetal force vector (toward center) - FIXED
                 if (this.showCentripetalForce) {
-                    const forceAngle = this.angle + Math.PI;
-                    const forceEndX = x + vectorLengths.forceLength * Math.cos(forceAngle);
-                    const forceEndY = y + vectorLengths.forceLength * Math.sin(forceAngle);
+                    const actualForceLength = vectorLengths.forceLength;
+                    
+                    // CORRECTED: Centripetal force points toward center
+                    // Calculate direction from object to center
+                    const directionToCenterX = this.centerX - x;
+                    const directionToCenterY = this.centerY - y;
+                    const distanceToCenter = Math.sqrt(directionToCenterX * directionToCenterX + directionToCenterY * directionToCenterY);
+                    
+                    // Normalize the direction vector
+                    const normalizedX = directionToCenterX / distanceToCenter;
+                    const normalizedY = directionToCenterY / distanceToCenter;
+                    
+                    // Calculate force vector end point
+                    const forceEndX = x + actualForceLength * normalizedX;
+                    const forceEndY = y + actualForceLength * normalizedY;
 
                     // Draw centripetal force arrow (green, toward center)
                     this.drawArrow(x, y, forceEndX, forceEndY, '#00AA00', 4, 14);
 
-                    // Add Fc label
-                    const forceLabelX = forceEndX + labelGap * Math.cos(forceAngle);
-                    const forceLabelY = forceEndY + labelGap * Math.sin(forceAngle);
+                    // Add Fc label - position it offset from the force vector
+                    const offsetX = normalizedY * labelGap; // Perpendicular to force direction
+                    const offsetY = -normalizedX * labelGap;
+                    const forceLabelX = forceEndX + offsetX;
+                    const forceLabelY = forceEndY + offsetY;
                     
                     this.ctx.fillStyle = '#00AA00';
                     this.ctx.font = 'bold 20px Arial';
